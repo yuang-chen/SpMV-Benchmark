@@ -412,7 +412,7 @@ void conduct_vhcc(int m, int n, int nnz, int* row_idx, int* col_idx, value_t* va
 	int num_panel = 1;
 
   int num_threads = omp_get_max_threads();
-int threads_per_core = num_threads/68;
+int threads_per_core = num_threads/40;
 
 
 

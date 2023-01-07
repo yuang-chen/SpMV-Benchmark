@@ -153,7 +153,7 @@ int convertCSR2COO ( const struct _PAVA_CSRMatrix *csrMatrix, struct _PAVA_COOMa
     /* now convert matrix in CSR 0-based format to COO 0-based format */
     /************************/
 
-    job[0] = 0; //  CSR  ->   COO
+    job[0] = 0; //  CSR  ->   COO  ; job[0] = 1 COO->CSR
     job[1] = 0; // 0-based CSR
     job[2] = 0; // 0-based COO
     job[4] = csrMatrix->nnz;
@@ -208,8 +208,73 @@ int convertCSR2COO ( const struct _PAVA_CSRMatrix *csrMatrix, struct _PAVA_COOMa
 
 //    printf( "Operation CSR->COO completed\n" );
     return 0;
-}   // convertCOO2CSR
+}   // convertCSR2COO
 
+// int convertCOO2CSR ( const struct _PAVA_COOMatrix *cooMatrix,  struct _PAVA_CSRMatrix *csrMatrix  )
+// {
+//     int info;
+//     int job[8];
+
+//     /************************/
+//     /* now convert matrix in CSR 0-based format to COO 0-based format */
+//     /************************/
+
+//     job[0] = 1; // COO->CSR
+//     job[1] = 0; // 0-based CSR
+//     job[2] = 0; // 0-based COO
+//     job[4] = cooMatrix->nnz;
+//     job[5] = 3; // all CSR arrays are filled
+
+//     info = 0;
+
+//     csrMatrix->numRows = cooMatrix->numRows;
+//     csrMatrix->numCols = cooMatrix->numCols;
+//     csrMatrix->nnz   = cooMatrix->nnz;
+
+// //    std::cout<<" start coo malloc"<<std::endl;
+
+//     csrMatrix->rowOffsets = ( int* )    MKL_malloc( (csrMatrix->numRows + 1) * sizeof( int ),    ALIGN512 );
+//     csrMatrix->cols = ( int* )    MKL_malloc( csrMatrix->nnz * sizeof( int ),    ALIGN512 );
+//     csrMatrix->vals = ( double* ) MKL_malloc( csrMatrix->nnz * sizeof( double ), ALIGN512 );
+
+//     if ( NULL == csrMatrix->rowOffsets || NULL == csrMatrix->cols || NULL == csrMatrix->vals )
+//     {
+//         MKL_free( csrMatrix->rowOffsets );
+//         MKL_free( csrMatrix->cols );
+//         MKL_free( csrMatrix->vals );
+//         fprintf( stderr, "Could not allocate memory for converting matrix to COO format\n" );
+//         return -5;
+//     }
+
+//     mkl_dcsrcoo ( job,
+//                   &csrMatrix->numRows,
+//                   csrMatrix->vals,
+//                   csrMatrix->cols,
+//                   csrMatrix->rowOffsets,
+//                   (int*)&cooMatrix->nnz,
+//                   cooMatrix->vals,
+//                   cooMatrix->rows,
+//                   cooMatrix->cols,
+//                   &info );
+
+//     if ( info != 0 )
+//     {
+//         fprintf( stderr, " Error converting CSR -> COO: %d\n", info );
+//         MKL_free( csrMatrix->rowOffsets );
+//         MKL_free( csrMatrix->cols );
+//         MKL_free( csrMatrix->vals );
+//         return -10;
+//     }
+
+// /*
+//     int kkkk=0;
+//     for(kkkk=0; kkkk<256; kkkk++)
+//        printf(" cols[%d]= %d, vals[%d]=%f\n", kkkk, csrMatrix->cols[kkkk], kkkk, csrMatrix->vals[kkkk]);
+// */
+
+// //    printf( "Operation CSR->COO completed\n" );
+//     return 0;
+// }
 
 int convertCSR2CSC ( const struct _PAVA_CSRMatrix *csrMatrix, struct _PAVA_CSCMatrix *cscMatrix )
 {
@@ -220,7 +285,7 @@ int convertCSR2CSC ( const struct _PAVA_CSRMatrix *csrMatrix, struct _PAVA_CSCMa
     /* now convert matrix in CSR 0-based format to COO 0-based format */
     /************************/
 
-    job[0] = 0; //  CSR  ->   CSC
+    job[0] = 0; //  CSR  ->   CSC   
     job[1] = 0; // 0-based CSR
     job[2] = 0; // 0-based CSC
     job[5] = 1; // all CSC arrays are filled

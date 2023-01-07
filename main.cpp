@@ -55,7 +55,138 @@ using namespace std;
 #define LARGE_ITERS 1000
 #define SMALL_ITERS 10
 
-int conduct_benchmark(char* fileName, int numThreads, _PAVA_COOMatrix* fileCOOMatrix);
+int conduct_benchmark(char* fileName, int numThreads, _PAVA_CSRMatrix* fileCSRMatrix);
+
+int readCSR(char* matrixName, struct _PAVA_COOMatrix *cooMatrix) {
+    int nRows, nCols, nElements;  
+   std::ifstream input_file (matrixName, std::ios::binary);
+   if(!input_file.is_open()) {
+      std::cout << "cannot open the input csr file!" << '\n';
+      exit(1);
+   }
+
+   input_file.read(reinterpret_cast<char*>(&nRows), sizeof(int));
+   input_file.read(reinterpret_cast<char*>(&nElements), sizeof(int));
+
+   nCols = nRows;
+   int nElements_padding = (nElements%16 == 0) ? nElements : (nElements + 16)/ 16 * 16;
+
+
+  std::cout<<"==========================================================================="<<std::endl;
+    std::cout<<"=========*********  Informations of the sparse matrix   *********=========="<<std::endl;
+    std::cout<<std::endl;
+//    std::cout<<" numRows is "<<nRows<<"; numCols is "<< nCols<<";  Number of Elements is "<< nElements<<";  After Padding, Number of Elements is "<< nElements_padding<<std::endl;
+    std::cout<<"     Number of Rows is :"<< nRows<<std::endl;
+    std::cout<<"  Number of Columns is :"<< nCols<<std::endl;
+    std::cout<<" Number of Elements is :"<< nElements<<std::endl;
+    std::cout<<"       After Alignment :"<< nElements_padding<<std::endl;
+    std::cout<<std::endl;
+  std::cout<<"==========================================================================="<<std::endl;
+   
+    double* val_ptr = (double*) MKL_malloc(sizeof(double) * nElements_padding, ALIGN512); 
+    int *cols_ptr = (int*) MKL_malloc(sizeof(int) * nElements_padding, ALIGN512);
+    int *rows_ptr = (int*) MKL_malloc(sizeof(int) * nElements_padding, ALIGN512);
+
+    int *rowDelimiters_ptr = (int*) MKL_malloc(sizeof(int) * (nRows+2), ALIGN512);
+    
+    double *vals = val_ptr; 
+    int *cols = cols_ptr; 
+    int *rows = rows_ptr;
+    int *rowDelimiters = rowDelimiters_ptr; 
+
+   input_file.read(reinterpret_cast<char*>(rowDelimiters), nRows * sizeof(int));
+   input_file.read(reinterpret_cast<char*>(cols), nElements * sizeof(int));
+
+   #pragma omp parallel for
+   for(int i =0; i < nElements; i++) {
+      cols[i] += 1; // increment the id value
+      vals[i] = (double) (i % 13);
+   }
+
+   rowDelimiters[nRows] = nElements;
+   rowDelimiters[nRows+1] = nElements_padding;
+
+   #pragma omp parallel for
+   for(int i =0; i < nRows; i++) {
+      for(int j = rowDelimiters[i]; j < rowDelimiters[i+1]; j++)
+		rows[j] = i+1;
+   }
+
+   for(int i = nElements; i < nElements_padding; i++) {
+      cols[i] = cols[nElements-1];
+      vals[i] = 0;
+   }
+
+    cooMatrix->nnz = nElements_padding; 
+    cooMatrix->numRows = nRows; 
+    cooMatrix->numCols = nCols; 
+    cooMatrix->rows  = rows;
+    cooMatrix->cols  = cols;
+    cooMatrix->vals  = vals;
+
+    MKL_free(rowDelimiters_ptr);
+}
+
+int readCSR(char* matrixName, struct _PAVA_CSRMatrix *csrMatrix) {
+    int nRows, nCols, nElements;  
+   std::ifstream input_file (matrixName, std::ios::binary);
+   if(!input_file.is_open()) {
+      std::cout << "cannot open the input csr file!" << '\n';
+      exit(1);
+   }
+
+   input_file.read(reinterpret_cast<char*>(&nRows), sizeof(int));
+   input_file.read(reinterpret_cast<char*>(&nElements), sizeof(int));
+
+   nCols = nRows;
+   int nElements_padding = (nElements%16 == 0) ? nElements : (nElements + 16)/ 16 * 16;
+
+
+  std::cout<<"==========================================================================="<<std::endl;
+    std::cout<<"=========*********  Informations of the sparse matrix   *********=========="<<std::endl;
+    std::cout<<std::endl;
+//    std::cout<<" numRows is "<<nRows<<"; numCols is "<< nCols<<";  Number of Elements is "<< nElements<<";  After Padding, Number of Elements is "<< nElements_padding<<std::endl;
+    std::cout<<"     Number of Rows is :"<< nRows<<std::endl;
+    std::cout<<"  Number of Columns is :"<< nCols<<std::endl;
+    std::cout<<" Number of Elements is :"<< nElements<<std::endl;
+    std::cout<<"       After Alignment :"<< nElements_padding<<std::endl;
+    std::cout<<std::endl;
+  std::cout<<"==========================================================================="<<std::endl;
+   
+    double* val_ptr = (double*) MKL_malloc(sizeof(double) * nElements_padding, ALIGN512); 
+    int *cols_ptr = (int*) MKL_malloc(sizeof(int) * nElements_padding, ALIGN512);
+    int *rows_ptr = (int*) MKL_malloc(sizeof(int) * (nRows+1), ALIGN512);
+
+    
+    double *vals = val_ptr; 
+    int *cols = cols_ptr; 
+    int *rows = rows_ptr;
+
+   input_file.read(reinterpret_cast<char*>(rows), nRows * sizeof(int));
+   input_file.read(reinterpret_cast<char*>(cols), nElements * sizeof(int));
+
+   #pragma omp parallel for
+   for(int i =0; i < nElements; i++) {
+      vals[i] = (double) (i % 13);
+   }
+
+   rows[nRows] = nElements_padding;
+   //rows[nRows+1] = nElements_padding;
+
+
+   for(int i = nElements; i < nElements_padding; i++) {
+      cols[i] = cols[nElements-1];
+      vals[i] = 0;
+   }
+
+    csrMatrix->nnz = nElements_padding; 
+    csrMatrix->numRows = nRows; 
+    csrMatrix->numCols = nCols; 
+    csrMatrix->rowOffsets  = rows;
+    csrMatrix->cols  = cols;
+    csrMatrix->vals  = vals;
+
+}
 
 
 int benchFile(char* fullpath, int thread_idx)
@@ -67,31 +198,31 @@ int benchFile(char* fullpath, int thread_idx)
     maxSize *= 1024;
 
    
-    struct _PAVA_COOMatrix* cooMatrix = (struct _PAVA_COOMatrix*) malloc(sizeof(struct _PAVA_COOMatrix));
+    struct _PAVA_CSRMatrix* csrMatrix = (struct _PAVA_CSRMatrix*) malloc(sizeof(struct _PAVA_COOMatrix));
 
-    if ( 0 != readCOOMatrix( fullpath, cooMatrix ) )
+    if ( 0 != readCSR( fullpath, csrMatrix ) )
     {
-        fprintf(stderr, "Reading COO matrix in matrix market format failed\n" );
+        fprintf(stderr, "Reading CSR matrix in failed\n" );
         return -2;
     }
 
-    std::cout<<"Basic informations"<<endl;
-    std::cout<<"        numRows = "<<cooMatrix->numRows<<endl;
-    std::cout<<"        numCols = "<<cooMatrix->numCols<<endl;
-    std::cout<<"            nnz = "<<cooMatrix->nnz<<endl;
-    if(cooMatrix->nnz < minSize)
+    // std::cout<<"Basic informations"<<endl;
+    // std::cout<<"        numRows = "<<csrMatrix->numRows<<endl;
+    // std::cout<<"        numCols = "<<csrMatrix->numCols<<endl;
+    // std::cout<<"            nnz = "<<csrMatrix->nnz<<endl;
+    if(csrMatrix->nnz < minSize)
     {
         std::cout<<" FileWarning! "<<fullpath <<" is too small (4k)"<<endl;
         std::cout<<endl<<"Congratulations! This File comes to an Normal End! Flag[NormalEnding]"<<endl<<endl;
         return -1;
     }
-    else if (cooMatrix->nnz > maxSize)
+    else if (csrMatrix->nnz > maxSize)
     {
         std::cout<<" FileWarning! "<<fullpath <<" is too large (1g))"<<endl;
         std::cout<<endl<<"Congratulations! This File comes to an Normal End! Flag[NormalEnding]"<<endl<<endl;
         return -1;
     }
-    else if (cooMatrix->numRows < 2048 || cooMatrix->numCols < 2048)
+    else if (csrMatrix->numRows < 2048 || csrMatrix->numCols < 2048)
     {
         std::cout<<" FileWarning! "<<fullpath <<" has too few rows or cols"<<endl;
         std::cout<<endl<<"Congratulations! This File comes to an Normal End! Flag[NormalEnding]"<<endl<<endl;
@@ -103,11 +234,12 @@ int benchFile(char* fullpath, int thread_idx)
     if(thread_idx ==0)
         for(int iterThreads=68; iterThreads<=272; iterThreads+=68)
         {
-            conduct_benchmark(fullpath, iterThreads, cooMatrix);
+            conduct_benchmark(fullpath, iterThreads, csrMatrix);
         }
     else
-        conduct_benchmark(fullpath, thread_idx, cooMatrix);
+        conduct_benchmark(fullpath, thread_idx, csrMatrix);
 
+    deleteCSRMatrix( csrMatrix );
     std::cout<<endl<<"Congratulations! This File comes to an Normal End! Flag[NormalEnding]"<<endl<<endl;
     return 0;
 
@@ -200,7 +332,7 @@ int main(int argc, char** argv)
 
 }
 
-int conduct_benchmark(char* fileName, int numThreads, _PAVA_COOMatrix* fileCOOMatrix)
+int conduct_benchmark(char* fileName, int numThreads, _PAVA_CSRMatrix* fileCSRMatrix)
 {
 //    char* fileName = argv[1];
 
@@ -241,12 +373,12 @@ int conduct_benchmark(char* fileName, int numThreads, _PAVA_COOMatrix* fileCOOMa
 
     // Align allocated memory to boost performance 
 #ifdef MMAP
-    x     = (double*)mmap(0, fileCOOMatrix->numCols* sizeof(double), PROT_READ|PROT_WRITE,MAP_ANONYMOUS|MAP_PRIVATE|MAP_HUGETLB,-1,0);
+    x     = (double*)mmap(0, fileCSRMatrix->numCols* sizeof(double), PROT_READ|PROT_WRITE,MAP_ANONYMOUS|MAP_PRIVATE|MAP_HUGETLB,-1,0);
 #else
-    x     = ( double* ) MKL_malloc ( fileCOOMatrix->numCols * sizeof( double ), ALIGN );
+    x     = ( double* ) MKL_malloc ( fileCSRMatrix->numCols * sizeof( double ), ALIGN );
 #endif
-    y     = ( double* ) MKL_malloc ( fileCOOMatrix->numRows * sizeof( double ), ALIGN );
-    y_ref = ( double* ) MKL_malloc ( fileCOOMatrix->numRows * sizeof( double ), ALIGN );
+    y     = ( double* ) MKL_malloc ( fileCSRMatrix->numRows * sizeof( double ), ALIGN );
+    y_ref = ( double* ) MKL_malloc ( fileCSRMatrix->numRows * sizeof( double ), ALIGN );
 
     if ( NULL == x || NULL == y || NULL == y_ref )
     {
@@ -255,7 +387,7 @@ int conduct_benchmark(char* fileName, int numThreads, _PAVA_COOMatrix* fileCOOMa
         MKL_free( y );
         MKL_free( y_ref );
 
-        deleteCOOMatrix( fileCOOMatrix );
+        deleteCSRMatrix( fileCSRMatrix );
         return -1;
     }
 
@@ -274,9 +406,9 @@ int conduct_benchmark(char* fileName, int numThreads, _PAVA_COOMatrix* fileCOOMa
 
     double normX, normY, residual;
     double estimatedAccuracy;
-    double matrixFrobeniusNorm = calcFrobeniusNorm ( fileCOOMatrix->nnz, fileCOOMatrix->vals );
-    normX = calcFrobeniusNorm ( fileCOOMatrix->numCols, x );
-    normY = calcFrobeniusNorm ( fileCOOMatrix->numRows, y );
+    double matrixFrobeniusNorm = calcFrobeniusNorm ( fileCSRMatrix->nnz, fileCSRMatrix->vals );
+    normX = calcFrobeniusNorm ( fileCSRMatrix->numCols, x );
+    normY = calcFrobeniusNorm ( fileCSRMatrix->numRows, y );
     // estimate accuracy of SpMV oparation: y = alpha * A * x + beta * y
     // || y1 - y2 || < eps * ( |alpha| * ||A|| * ||x|| + |beta| * ||y||)
     estimatedAccuracy = fabs( alpha ) * matrixFrobeniusNorm * normX + fabs( beta ) * normY;
@@ -291,38 +423,38 @@ int conduct_benchmark(char* fileName, int numThreads, _PAVA_COOMatrix* fileCOOMa
     std::cout<<"      CSR     "<<endl;
     std::cout<<"**************"<<endl;
 
-    struct _PAVA_CSRMatrix* csrMatrix = (struct _PAVA_CSRMatrix*) malloc(sizeof(struct _PAVA_CSRMatrix));
+    //struct _PAVA_CSRMatrix* csrMatrix = (struct _PAVA_CSRMatrix*) malloc(sizeof(struct _PAVA_CSRMatrix));
     numIterations = LARGE_ITERS;
 
     omp_threads = omp_get_max_threads();
     mkl_set_num_threads_local(omp_threads);
     mkl_threads = mkl_get_max_threads();
 
-    std::cout<<" Converting COO->CSR"<<endl;
-    t1 = microtime();
-    res=convertCOO2CSR(fileCOOMatrix, csrMatrix);
-    t2 = microtime();
-    if(res!=0)
-    {
-        std::cout<<" CSR Converting Failed"<<std::endl;
+    // std::cout<<" Converting COO->CSR"<<endl;
+    // t1 = microtime();
+    // res=convertCOO2CSR(fileCOOMatrix, csrMatrix);
+    // t2 = microtime();
+    // if(res!=0)
+    // {
+    //     std::cout<<" CSR Converting Failed"<<std::endl;
 
-        printPerformance(matrixName, "CSR", mkl_threads, -1, -1);
-        free(csrMatrix);
-    }
-    else
+    //     printPerformance(matrixName, "CSR", mkl_threads, -1, -1);
+    //     free(csrMatrix);
+    // }
+   // else
     {
     //    std::cout<<"Converting(COO->CSR)   Time of CSR    is "<< t2 - t1 <<endl;
 
         // first time to init x, y, y_ref
-        initVectors( csrMatrix->numRows, csrMatrix->numCols, x, y, y_ref );
-        referenceSpMV(csrMatrix, x, y_ref);
+        initVectors( fileCSRMatrix->numRows, fileCSRMatrix->numCols, x, y, y_ref );
+        referenceSpMV(fileCSRMatrix, x, y_ref);
 
         std::cout<<" Executing CSR"<<endl;
-        benchmark_CSR_SpMV( csrMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 1);
-        res = checkResults(csrMatrix->numRows, y, y_ref);
+        benchmark_CSR_SpMV( fileCSRMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 1);
+        res = checkResults(fileCSRMatrix->numRows, y, y_ref);
 
         t3 = microtime();
-        benchmark_CSR_SpMV( csrMatrix, alpha, x, beta, y, y_ref, 0, matrixName, numIterations);
+        benchmark_CSR_SpMV( fileCSRMatrix, alpha, x, beta, y, y_ref, 0, matrixName, numIterations);
         t4 = microtime();
     //    std::cout<<" The SpMV Execution Time of CSR    is "<< (t4 - t3)/nuIterations<<endl;
        
@@ -332,7 +464,7 @@ int conduct_benchmark(char* fileName, int numThreads, _PAVA_COOMatrix* fileCOOMa
     //    deleteCOOMatrix( fileCOOMatrix );    
     }
 
-
+    struct _PAVA_CSRMatrix* csrMatrix = fileCSRMatrix;
 
 
 
@@ -376,7 +508,7 @@ int conduct_benchmark(char* fileName, int numThreads, _PAVA_COOMatrix* fileCOOMa
 
         printPerformance(matrixName, "COO", mkl_threads, t2-t1, (t4 - t3)/numIterations);
 
-        deleteCOOMatrix(cooMatrix);
+        //deleteCOOMatrix(cooMatrix);
     }
 ///////////////////////
 //      CSC
@@ -595,21 +727,20 @@ int conduct_benchmark(char* fileName, int numThreads, _PAVA_COOMatrix* fileCOOMa
     std::cout<<"**************"<<endl;
     numIterations = LARGE_ITERS;
 
-    initVectors( fileCOOMatrix->numRows, fileCOOMatrix->numCols, NULL, y, NULL );
+    initVectors( cooMatrix->numRows, cooMatrix->numCols, NULL, y, NULL );
 
-    conduct_vhcc(fileCOOMatrix->numRows, fileCOOMatrix->numCols, fileCOOMatrix->nnz, fileCOOMatrix->rows, fileCOOMatrix->cols, fileCOOMatrix->vals, x, y, alpha, matrixName, numIterations);
+    conduct_vhcc(cooMatrix->numRows, cooMatrix->numCols, cooMatrix->nnz, cooMatrix->rows, cooMatrix->cols, cooMatrix->vals, x, y, alpha, matrixName, numIterations);
 //
 //    printPerformance(matrixName, "VHCC", omp_threads, -1, -1);
 
-    res = checkResults(fileCOOMatrix->numRows, y, y_ref);
+    res = checkResults(cooMatrix->numRows, y, y_ref);
     
 ////////////////////////////////////////
     MKL_free( x );
     MKL_free( y );
     MKL_free( y_ref );
-    deleteCSRMatrix(csrMatrix);
+    deleteCOOMatrix(cooMatrix);
     free(tmpMatrixName);
-
     std::cout<<" x.x.x.x.x.x.x.x.x.x.x.x"<<endl<<endl;
 
     return 0;

@@ -32,6 +32,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fstream>
 #include "mmio.h"
 #include "mkl.h"
 #include <math.h>
