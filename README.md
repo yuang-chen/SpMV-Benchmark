@@ -9,7 +9,8 @@ Available methods based on MKL library:
 5. IE
 6. BSR
 
-Fancy approaches from papers:
+Fancy approaches from papers: 
+
 7. ESB
 8. CVR
 9. CSR5
