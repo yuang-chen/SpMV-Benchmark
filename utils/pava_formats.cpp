@@ -505,9 +505,7 @@ int convertCSR2BSR ( const struct _PAVA_CSRMatrix *csrMatrix, struct _PAVA_BSRMa
 
     const MKL_INT maxBlockPerRow = (bsrMatrix->numRows + blockSize - 1)/blockSize;
 
-    long long int max_size = 2 * 1024;
-    max_size *= 1024;
-    max_size *= 1024;
+    long long int max_size = INT32_MAX;
     if((maxBlockPerRow * maxBlockPerRow) > max_size)
     {
         std::cout<<" Error: too large for memory allocation "<<std::endl;

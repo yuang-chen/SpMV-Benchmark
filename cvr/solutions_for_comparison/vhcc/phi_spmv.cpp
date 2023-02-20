@@ -386,7 +386,7 @@ int main(int argc, char *argv[])
         omp_set_num_threads(num_threads);
         if(num_threads == 0)
            return 0;
-        threads_per_core = num_threads / 68;
+        threads_per_core = num_threads / omp_get_num_threads();
         num_panel = atoi(argv[4]);
 	
 	kmp_set_defaults("KMP_AFFINITY=compact");

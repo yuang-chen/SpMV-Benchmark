@@ -52,8 +52,8 @@ using namespace std;
 #define EPS 1.0e-15
 
 
-#define LARGE_ITERS 1000
-#define SMALL_ITERS 10
+#define LARGE_ITERS 100
+#define SMALL_ITERS 100
 
 int conduct_benchmark(char* fileName, int numThreads, _PAVA_CSRMatrix* fileCSRMatrix);
 
@@ -193,9 +193,8 @@ int benchFile(char* fullpath, int thread_idx)
 {
 
     int minSize = 4096;
-    int maxSize = 1024+128;   // 1 billion data
-    maxSize *= 1024;
-    maxSize *= 1024;
+    int maxSize = INT32_MAX ;   // int max
+    
 
    
     struct _PAVA_CSRMatrix* csrMatrix = (struct _PAVA_CSRMatrix*) malloc(sizeof(struct _PAVA_COOMatrix));
@@ -218,7 +217,7 @@ int benchFile(char* fullpath, int thread_idx)
     }
     else if (csrMatrix->nnz > maxSize)
     {
-        std::cout<<" FileWarning! "<<fullpath <<" is too large (1g))"<<endl;
+        std::cout<<" FileWarning! "<<fullpath <<" is too large (2^31))"<<endl;
         std::cout<<endl<<"Congratulations! This File comes to an Normal End! Flag[NormalEnding]"<<endl<<endl;
         return -1;
     }
@@ -305,7 +304,7 @@ int main(int argc, char** argv)
     {
         fprintf( stderr, "Insufficient number of input parameters:\n");
         fprintf( stderr, "File name with sparse matrix for benchmarking is missing\n" );
-        fprintf( stderr, "Usage: %s [martix market filename]\n", argv[0] );
+        fprintf( stderr, "Usage: %s [data.csr] [threads] [iterations]\n", argv[0] );
         exit(1);
     }
 
@@ -393,7 +392,6 @@ int conduct_benchmark(char* fileName, int numThreads, _PAVA_CSRMatrix* fileCSRMa
 
 
 
-
     // res is the number of items with error
     int res = 0;
     int numIterations;
@@ -423,27 +421,13 @@ int conduct_benchmark(char* fileName, int numThreads, _PAVA_CSRMatrix* fileCSRMa
     std::cout<<"      CSR     "<<endl;
     std::cout<<"**************"<<endl;
 
-    //struct _PAVA_CSRMatrix* csrMatrix = (struct _PAVA_CSRMatrix*) malloc(sizeof(struct _PAVA_CSRMatrix));
     numIterations = LARGE_ITERS;
 
     omp_threads = omp_get_max_threads();
     mkl_set_num_threads_local(omp_threads);
     mkl_threads = mkl_get_max_threads();
 
-    // std::cout<<" Converting COO->CSR"<<endl;
-    // t1 = microtime();
-    // res=convertCOO2CSR(fileCOOMatrix, csrMatrix);
-    // t2 = microtime();
-    // if(res!=0)
-    // {
-    //     std::cout<<" CSR Converting Failed"<<std::endl;
-
-    //     printPerformance(matrixName, "CSR", mkl_threads, -1, -1);
-    //     free(csrMatrix);
-    // }
-   // else
     {
-    //    std::cout<<"Converting(COO->CSR)   Time of CSR    is "<< t2 - t1 <<endl;
 
         // first time to init x, y, y_ref
         initVectors( fileCSRMatrix->numRows, fileCSRMatrix->numCols, x, y, y_ref );
@@ -465,9 +449,6 @@ int conduct_benchmark(char* fileName, int numThreads, _PAVA_CSRMatrix* fileCSRMa
     }
 
     struct _PAVA_CSRMatrix* csrMatrix = fileCSRMatrix;
-
-
-
 
 ///////////////////////
 //      COO      
@@ -494,169 +475,169 @@ int conduct_benchmark(char* fileName, int numThreads, _PAVA_CSRMatrix* fileCSRMa
         printPerformance(matrixName, "COO", mkl_threads, -1, -1);
         free(cooMatrix);
     }
-    else
-    {
-        initVectors( cooMatrix->numRows, cooMatrix->numCols, NULL, y, NULL );
+    // else
+    // {
+    //     initVectors( cooMatrix->numRows, cooMatrix->numCols, NULL, y, NULL );
 
-        std::cout<<" Executing COO"<<endl;
-        benchmark_COO_SpMV( cooMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 1);
-        res = checkResults(cooMatrix->numRows, y, y_ref);
+    //     std::cout<<" Executing COO"<<endl;
+    //     benchmark_COO_SpMV( cooMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 1);
+    //     res = checkResults(cooMatrix->numRows, y, y_ref);
 
-        t3 = microtime();
-        benchmark_COO_SpMV( cooMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 10);
-        t4 = microtime();
+    //     t3 = microtime();
+    //     benchmark_COO_SpMV( cooMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 10);
+    //     t4 = microtime();
 
-        printPerformance(matrixName, "COO", mkl_threads, t2-t1, (t4 - t3)/numIterations);
+    //     printPerformance(matrixName, "COO", mkl_threads, t2-t1, (t4 - t3)/numIterations);
 
-        //deleteCOOMatrix(cooMatrix);
-    }
+    //     //deleteCOOMatrix(cooMatrix);
+    // }
 ///////////////////////
 //      CSC
 ///////////////////////
-    std::cout<<"**************"<<endl;
-    std::cout<<"      CSC     "<<endl;
-    std::cout<<"**************"<<endl;
-    struct _PAVA_CSCMatrix* cscMatrix = (struct _PAVA_CSCMatrix* ) malloc (sizeof (struct _PAVA_CSCMatrix));
-    numIterations = SMALL_ITERS;
+//     std::cout<<"**************"<<endl;
+//     std::cout<<"      CSC     "<<endl;
+//     std::cout<<"**************"<<endl;
+//     struct _PAVA_CSCMatrix* cscMatrix = (struct _PAVA_CSCMatrix* ) malloc (sizeof (struct _PAVA_CSCMatrix));
+//     numIterations = SMALL_ITERS;
 
-    omp_threads = omp_get_max_threads();
-    mkl_set_num_threads_local(omp_threads);
-    mkl_threads = mkl_get_max_threads();
+//     omp_threads = omp_get_max_threads();
+//     mkl_set_num_threads_local(omp_threads);
+//     mkl_threads = mkl_get_max_threads();
 
-    std::cout<<" Converting CSR->CSC"<<endl;
-    t1 = microtime();
-    res = convertCSR2CSC(csrMatrix, cscMatrix);
-    t2 = microtime();
-    if(res!=0)
-    {
-        std::cout<<" CSC Converting Failed"<<std::endl;
+//     std::cout<<" Converting CSR->CSC"<<endl;
+//     t1 = microtime();
+//     res = convertCSR2CSC(csrMatrix, cscMatrix);
+//     t2 = microtime();
+//     if(res!=0)
+//     {
+//         std::cout<<" CSC Converting Failed"<<std::endl;
 
-        printPerformance(matrixName, "CSC", mkl_threads, -1, -1);
-        free(cscMatrix);
-    }
-    else
-    {
+//         printPerformance(matrixName, "CSC", mkl_threads, -1, -1);
+//         free(cscMatrix);
+//     }
+//     else
+//     {
 
-        initVectors( cscMatrix->numRows, cscMatrix->numCols, NULL, y, NULL );
-//        referenceSpMV(csrMatrix, x, y_ref);
+//         initVectors( cscMatrix->numRows, cscMatrix->numCols, NULL, y, NULL );
+// //        referenceSpMV(csrMatrix, x, y_ref);
 
-        std::cout<<" Executing CSC"<<endl;
-        benchmark_CSC_SpMV( cscMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 1);
-        res = checkResults(cscMatrix->numRows, y, y_ref);
+//         std::cout<<" Executing CSC"<<endl;
+//         benchmark_CSC_SpMV( cscMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 1);
+//         res = checkResults(cscMatrix->numRows, y, y_ref);
         
-        initVectors( cscMatrix->numRows, cscMatrix->numCols, x, y, y_ref );
-        referenceSpMV(csrMatrix, x, y_ref);
+//         initVectors( cscMatrix->numRows, cscMatrix->numCols, x, y, y_ref );
+//         referenceSpMV(csrMatrix, x, y_ref);
 
-        t3 = microtime();
-        benchmark_CSC_SpMV( cscMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 10);
-        t4 = microtime();
+//         t3 = microtime();
+//         benchmark_CSC_SpMV( cscMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 10);
+//         t4 = microtime();
 
-        printPerformance(matrixName, "CSC", mkl_threads, t2 - t1, (t4 - t3)/numIterations);
-        deleteCSCMatrix(cscMatrix);
-    }
+//         printPerformance(matrixName, "CSC", mkl_threads, t2 - t1, (t4 - t3)/numIterations);
+//         deleteCSCMatrix(cscMatrix);
+//     }
 
 
 ///////////////////////
 //      DIA
 ///////////////////////
 
-    std::cout<<"**************"<<endl;
-    std::cout<<"      DIA     "<<endl;
-    std::cout<<"**************"<<endl;
-    struct _PAVA_DIAMatrix* diaMatrix = (struct _PAVA_DIAMatrix* ) malloc (sizeof (struct _PAVA_DIAMatrix));
-    numIterations = SMALL_ITERS;
+//     std::cout<<"**************"<<endl;
+//     std::cout<<"      DIA     "<<endl;
+//     std::cout<<"**************"<<endl;
+//     struct _PAVA_DIAMatrix* diaMatrix = (struct _PAVA_DIAMatrix* ) malloc (sizeof (struct _PAVA_DIAMatrix));
+//     numIterations = SMALL_ITERS;
 
-    omp_threads = omp_get_max_threads();
-    mkl_set_num_threads_local(omp_threads);
-    mkl_threads = mkl_get_max_threads();
+//     omp_threads = omp_get_max_threads();
+//     mkl_set_num_threads_local(omp_threads);
+//     mkl_threads = mkl_get_max_threads();
 
-    std::cout<<" Converting CSR->DIA"<<endl;
-    t1 = microtime();
-    res = convertCSR2DIA(csrMatrix, diaMatrix);
-    t2 = microtime();
-    if(res!=0)
-    {
-        std::cout<<" DIA Converting Failed"<<std::endl;
+//     std::cout<<" Converting CSR->DIA"<<endl;
+//     t1 = microtime();
+//     res = convertCSR2DIA(csrMatrix, diaMatrix);
+//     t2 = microtime();
+//     if(res!=0)
+//     {
+//         std::cout<<" DIA Converting Failed"<<std::endl;
 
-        printPerformance(matrixName, "DIA", mkl_threads, -1, -1);
-        free(diaMatrix);
-    }
-    else
-    {
-        initVectors( diaMatrix->numRows, diaMatrix->numCols, NULL, y, NULL );
-//        referenceSpMV(csrMatrix, x, y_ref);
+//         printPerformance(matrixName, "DIA", mkl_threads, -1, -1);
+//         free(diaMatrix);
+//     }
+//     else
+//     {
+//         initVectors( diaMatrix->numRows, diaMatrix->numCols, NULL, y, NULL );
+// //        referenceSpMV(csrMatrix, x, y_ref);
 
-        std::cout<<" Executing DIA"<<endl;
-        benchmark_DIA_SpMV( diaMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 1);
-        res = checkResults(csrMatrix->numRows, y, y_ref);
+//         std::cout<<" Executing DIA"<<endl;
+//         benchmark_DIA_SpMV( diaMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 1);
+//         res = checkResults(csrMatrix->numRows, y, y_ref);
 
-        t3 = microtime();
-        benchmark_DIA_SpMV( diaMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 10);
-        t4 = microtime();
+//         t3 = microtime();
+//         benchmark_DIA_SpMV( diaMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 10);
+//         t4 = microtime();
 
-        printPerformance(matrixName, "DIA", mkl_threads, t2 - t1, (t4 - t3)/numIterations);
-        deleteDIAMatrix(diaMatrix);
-    }
+//         printPerformance(matrixName, "DIA", mkl_threads, t2 - t1, (t4 - t3)/numIterations);
+//         deleteDIAMatrix(diaMatrix);
+//     }
 ///////////////////////
 //      IE
 ///////////////////////
-    std::cout<<"**************"<<endl;
-    std::cout<<"      IE      "<<endl;
-    std::cout<<"**************"<<endl;
-    numIterations = LARGE_ITERS;
+//     std::cout<<"**************"<<endl;
+//     std::cout<<"      IE      "<<endl;
+//     std::cout<<"**************"<<endl;
+//     numIterations = LARGE_ITERS;
 
-    initVectors( csrMatrix->numRows, csrMatrix->numCols, NULL, y, NULL );
+//     initVectors( csrMatrix->numRows, csrMatrix->numCols, NULL, y, NULL );
 
-    benchmark_IE_SpMV( csrMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 10);
+//     benchmark_IE_SpMV( csrMatrix, alpha, x, beta, y, y_ref, 0, matrixName, 10);
 
-//    printPerformance(matrixName, "IE", mkl_threads, -1, -1);
-    res = checkResults(csrMatrix->numRows, y, y_ref);
+// //    printPerformance(matrixName, "IE", mkl_threads, -1, -1);
+//     res = checkResults(csrMatrix->numRows, y, y_ref);
 
 ///////////////////////
 //      BSR
 ///////////////////////
 
-    std::cout<<"**************"<<endl;
-    std::cout<<"      BSR      "<<endl;
-    std::cout<<"**************"<<endl;
-    struct _PAVA_BSRMatrix* bsrMatrix = (struct _PAVA_BSRMatrix* ) malloc (sizeof (struct _PAVA_BSRMatrix));
-    numIterations = SMALL_ITERS;
+//     std::cout<<"**************"<<endl;
+//     std::cout<<"      BSR      "<<endl;
+//     std::cout<<"**************"<<endl;
+//     struct _PAVA_BSRMatrix* bsrMatrix = (struct _PAVA_BSRMatrix* ) malloc (sizeof (struct _PAVA_BSRMatrix));
+//     numIterations = SMALL_ITERS;
     
-    omp_threads = omp_get_max_threads();
-    mkl_set_num_threads_local(omp_threads);
-    mkl_threads = mkl_get_max_threads();
+//     omp_threads = omp_get_max_threads();
+//     mkl_set_num_threads_local(omp_threads);
+//     mkl_threads = mkl_get_max_threads();
 
-    std::cout<<" Converting CSR->BSR"<<endl;
-    t1 = microtime();
-    res = convertCSR2BSR(csrMatrix, bsrMatrix, 4);
-    t2 = microtime();
+//     std::cout<<" Converting CSR->BSR"<<endl;
+//     t1 = microtime();
+//     res = convertCSR2BSR(csrMatrix, bsrMatrix, 4);
+//     t2 = microtime();
 
-    if(res!=0)
-    {
-        std::cout<<" BSR Converting Failed"<<std::endl;
+//     if(res!=0)
+//     {
+//         std::cout<<" BSR Converting Failed"<<std::endl;
 
-        printPerformance(matrixName, "BSR", mkl_threads, -1, -1);
-        free(bsrMatrix);
-    }
-    else
-    {
-        initVectors( bsrMatrix->numRows, bsrMatrix->numCols, NULL, y, NULL );
-//        referenceSpMV(csrMatrix, x, y_ref);
+//         printPerformance(matrixName, "BSR", mkl_threads, -1, -1);
+//         free(bsrMatrix);
+//     }
+//     else
+//     {
+//         initVectors( bsrMatrix->numRows, bsrMatrix->numCols, NULL, y, NULL );
+// //        referenceSpMV(csrMatrix, x, y_ref);
         
-        std::cout<<" Executing BSR"<<endl;
+//         std::cout<<" Executing BSR"<<endl;
 
-        benchmark_BSR_SpMV( bsrMatrix, alpha, x, beta, bsrMatrix->y_bsr, y_ref, 0, matrixName, 1);
-        res = checkResults(csrMatrix->numRows, bsrMatrix->y_bsr, y_ref);
+//         benchmark_BSR_SpMV( bsrMatrix, alpha, x, beta, bsrMatrix->y_bsr, y_ref, 0, matrixName, 1);
+//         res = checkResults(csrMatrix->numRows, bsrMatrix->y_bsr, y_ref);
 
-        t3 = microtime();
-        benchmark_BSR_SpMV( bsrMatrix, alpha, x, beta, bsrMatrix->y_bsr, y_ref, 0, matrixName, 10);
-        t4 = microtime();
+//         t3 = microtime();
+//         benchmark_BSR_SpMV( bsrMatrix, alpha, x, beta, bsrMatrix->y_bsr, y_ref, 0, matrixName, 10);
+//         t4 = microtime();
 
-        printPerformance(matrixName, "BSR", mkl_threads, t2 - t1, (t4 - t3)/numIterations);
+//         printPerformance(matrixName, "BSR", mkl_threads, t2 - t1, (t4 - t3)/numIterations);
 
-        deleteBSRMatrix(bsrMatrix);
+//         deleteBSRMatrix(bsrMatrix);
 
-    }
+//     }
 
 
 
